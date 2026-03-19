@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07070f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Superagents">
+<title>Superagents</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07070f; --bg2:#0c0c18; --bg3:#111120;
+    --border:#1c1c30; --border2:#252540;
+    --text:#c8d0e0; --muted:#4a5068; --muted2:#2e3248;
+    --jenny:#fb923c; --victor:#22d3ee; --tony:#a78bfa; --daisy:#34d399;
+    --ok:#22c55e; --err:#ef4444; --warn:#f59e0b; --bus:#7c3aed;
+    --safe-top: env(safe-area-inset-top);
+    --safe-bot: env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;height:-webkit-fill-available;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+  ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+  /* ── LAYOUT ROOT ── */
+  #app{display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available}
+
+  /* ── TOP BAR (mobile) ── */
+  #topbar{
+    background:var(--bg2);border-bottom:1px solid var(--border);
+    padding: calc(10px + var(--safe-top)) 14px 10px;
+    display:flex;align-items:center;gap:10px;flex-shrink:0;
+  }
+  #topbar-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;flex:1}
+  #topbar-desc{font-size:10px;color:var(--muted);margin-top:1px}
+  #btn-menu{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1}
+  #btn-bus-top{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--border);position:relative}
+  #bus-badge{position:absolute;top:-4px;right:-4px;background:var(--bus);color:#fff;font-size:8px;border-radius:8px;padding:1px 4px;font-family:'JetBrains Mono',monospace;display:none}
+  .topbar-tags{display:flex;gap:4px;margin-top:4px}
+
+  /* ── AGENT TABS ── */
+  #agent-tabs{
+    display:flex;background:var(--bg2);border-bottom:1px solid var(--border);
+    overflow-x:auto;flex-shrink:0;
+  }
+  #agent-tabs::-webkit-scrollbar{height:0}
+  .tab{
+    flex:1;min-width:60px;padding:8px 4px 7px;cursor:pointer;
+    border-bottom:2px solid transparent;transition:all .12s;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .tab.active{border-bottom-color:var(--tab-accent,#888)}
+  .tab-av{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+  .tab-name{font-size:9px;font-weight:500;font-family:'JetBrains Mono',monospace}
+  .tab-busy{display:none;gap:2px;align-items:center;margin-top:1px}
+  .tab-busy.on{display:flex}
+
+  /* ── MESSAGES ── */
+  #messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px;-webkit-overflow-scrolling:touch}
+  .msg-wrap{display:flex;gap:7px;align-items:flex-start;animation:fadeUp .2s ease forwards}
+  .msg-wrap.user{flex-direction:row-reverse}
+  .msg-bubble{max-width:80%;padding:8px 11px;border-radius:4px 11px 11px 11px;border:1px solid var(--border);background:var(--bg3)}
+  .msg-wrap.user .msg-bubble{border-radius:11px 4px 11px 11px}
+  .msg-bubble.sys{background:#12102a;border-color:#3b1f7244}
+  .msg-bubble.err{background:#2a1010;border-color:#7f1d1d55}
+  .msg-text{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;color:#b0bccf}
+  .msg-wrap.user .msg-text{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text)}
+  .msg-bubble.err .msg-text{color:#fca5a5}
+  .msg-sys-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--bus);margin-bottom:3px}
+  .msg-time{font-size:9px;color:var(--muted2);margin-top:3px}
+  .msg-wrap.user .msg-time{text-align:right}
+  .empty-state{margin:auto;text-align:center;opacity:.35}
+  .empty-icon{font-size:26px;margin-bottom:7px}
+  .empty-name{font-family:'Syne',sans-serif;font-size:14px}
+  .empty-desc{font-size:10px;color:var(--muted);margin-top:3px;padding:0 20px}
+  .typing-bubble{display:flex;gap:7px;align-items:flex-start}
+  .dot{width:5px;height:5px;border-radius:50%;animation:pulse 1.2s ease-in-out infinite}
+
+  /* ── INPUT ── */
+  #input-area{
+    padding:8px 12px;
+    padding-bottom: calc(8px + var(--safe-bot));
+    border-top:1px solid var(--border);background:var(--bg);flex-shrink:0;
+  }
+  #input-wrap{display:flex;gap:7px;align-items:flex-end;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 8px;transition:border-color .15s}
+  #input-wrap:focus-within{border-color:color-mix(in srgb,var(--active-accent,#888) 50%,transparent)}
+  #input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;line-height:1.4;resize:none;max-height:100px;min-height:22px}
+  #input::placeholder{color:var(--muted2)}
+  #btn-send{width:32px;height:32px;border-radius:50%;border:none;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0}
+  #btn-send:disabled{background:var(--muted2)!important;cursor:default}
+
+  /* ── SIDE DRAWER (bus + settings on mobile) ── */
+  #drawer-overlay{position:fixed;inset:0;background:#0008;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  #drawer-overlay.open{opacity:1;pointer-events:all}
+  #drawer{position:fixed;top:0;right:0;bottom:0;width:min(300px,88vw);background:var(--bg2);border-left:1px solid var(--border);z-index:51;transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;padding-top:var(--safe-top)}
+  #drawer.open{transform:translateX(0)}
+  #drawer-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .drawer-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--muted)}
+  #btn-close-drawer{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+
+  /* Conn panel inside drawer */
+  .conn-panel{margin:10px 10px 0;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+  .conn-title{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px}
+  .led-row{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .led{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s,box-shadow .3s}
+  .led.idle{background:var(--muted2)}
+  .led.ok{background:var(--ok);box-shadow:0 0 7px var(--ok)}
+  .led.err{background:var(--err);box-shadow:0 0 7px var(--err)}
+  .led.checking{background:var(--warn);animation:ledBlink .6s ease-in-out infinite}
+  .led-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);flex:1}
+  .led-status{font-family:'JetBrains Mono',monospace;font-size:9px}
+  .led-status.ok{color:var(--ok)}.led-status.err{color:var(--err)}.led-status.checking{color:var(--warn)}
+  .btn-check{width:100%;padding:7px;border-radius:6px;background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;cursor:pointer;transition:all .15s;margin-top:6px}
+  .btn-check:disabled{opacity:.6;cursor:default}
+
+  /* Bus messages inside drawer */
+  #bus-section{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:7px;-webkit-overflow-scrolling:touch}
+  .bus-empty{opacity:.3;font-size:11px;text-align:center;margin:auto;color:var(--muted);line-height:1.6}
+  .bus-msg{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:7px 9px;animation:slideIn .18s ease forwards}
+  .bus-msg-header{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+  .bus-from,.bus-to{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px}
+  .bus-arrow{color:var(--muted);font-size:10px}
+  .bus-time{font-size:9px;color:var(--muted2);margin-left:auto}
+  .bus-content{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8090a8;line-height:1.5}
+
+  /* Keys section inside drawer */
+  #keys-section{padding:10px;border-top:1px solid var(--border)}
+  .keys-title{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px}
+  .key-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;display:block}
+  .key-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;margin-bottom:8px}
+  .key-input:focus{border-color:var(--jenny)}
+  .btn-save-keys{width:100%;padding:8px;border-radius:7px;background:var(--jenny);border:none;color:#fff;font-weight:600;font-size:12px;cursor:pointer}
+
+  /* MODAL prima configurazione */
+  #modal-overlay{position:fixed;inset:0;background:#000c;display:flex;align-items:flex-end;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+  #modal-overlay.hidden{display:none}
+  #modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px 16px 0 0;padding:24px 20px;padding-bottom:calc(24px + var(--safe-bot));width:100%;max-width:500px}
+  .modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+  .modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:5px}
+  .modal-sub{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px}
+  .modal-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:5px;display:block;letter-spacing:.06em}
+  .modal-label span{color:var(--err)}
+  .modal-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;margin-bottom:12px}
+  .modal-input:focus{border-color:var(--jenny)}
+  .modal-hint{font-size:10px;color:var(--muted);margin-top:-8px;margin-bottom:12px;line-height:1.5}
+  .modal-hint a{color:var(--victor)}
+  .btn-modal-save{width:100%;padding:13px;border-radius:10px;background:var(--jenny);border:none;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+  .modal-divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+
+  .tag{font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 5px;border-radius:3px;border:1px solid}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes pulse{0%,100%{opacity:.25;transform:scale(.75)}50%{opacity:1;transform:scale(1)}}
+  @keyframes ledBlink{0%,100%{opacity:.25}50%{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- FIRST-RUN MODAL (bottom sheet stile mobile) -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙ Configura Superagents</div>
+    <div class="modal-sub">Inserisci le tue chiavi API. Vengono salvate solo sul tuo dispositivo.</div>
+
+    <label class="modal-label">ANTHROPIC API KEY <span>*</span></label>
+    <input class="modal-input" id="inp-anthropic" type="password" placeholder="sk-ant-api03-..." autocomplete="off" inputmode="text"/>
+    <div class="modal-hint">→ <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com → API Keys</a></div>
+
+    <hr class="modal-divider">
+
+    <label class="modal-label">CLICKUP PERSONAL API TOKEN <span>*</span></label>
+    <input class="modal-input" id="inp-clickup" type="password" placeholder="pk_..." autocomplete="off" inputmode="text"/>
+    <div class="modal-hint">→ <a href="https://app.clickup.com/settings/apps" target="_blank">ClickUp → Settings → Apps → API Token</a></div>
+
+    <button class="btn-modal-save" onclick="saveKeys()">Salva e avvia →</button>
+  </div>
+</div>
+
+<!-- DRAWER (bus + conn + keys) -->
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+<div id="drawer">
+  <div id="drawer-header">
+    <div class="drawer-title">SUPERAGENTS MENU</div>
+    <button id="btn-close-drawer" onclick="closeDrawer()">✕</button>
+  </div>
+
+  <!-- Connection check -->
+  <div class="conn-panel">
+    <div class="conn-title">STATO CONNESSIONI</div>
+    <div class="led-row">
+      <div class="led idle" id="led-web"></div>
+      <span class="led-label">Claude API</span>
+      <span class="led-status" id="led-web-txt">—</span>
+    </div>
+    <div class="led-row" style="margin-bottom:0">
+      <div class="led idle" id="led-cu"></div>
+      <span class="led-label">ClickUp MCP</span>
+      <span class="led-status" id="led-cu-txt">—</span>
+    </div>
+    <button class="btn-check" id="btn-check" onclick="runCheck()">⟳  VERIFICA CONNESSIONE</button>
+  </div>
+
+  <!-- Agent Bus -->
+  <div id="bus-section">
+    <div class="bus-empty" id="bus-empty-msg">Nessun messaggio ancora.<br>Gli agenti comunicheranno qui.</div>
+  </div>
+
+  <!-- Keys -->
+  <div id="keys-section">
+    <div class="keys-title">AGGIORNA CHIAVI API</div>
+    <label class="key-label">ANTHROPIC KEY</label>
+    <input class="key-input" id="edit-ant" type="password" placeholder="sk-ant-..." autocomplete="off"/>
+    <label class="key-label">CLICKUP TOKEN</label>
+    <input class="key-input" id="edit-cu" type="password" placeholder="pk_..." autocomplete="off"/>
+    <button class="btn-save-keys" onclick="updateKeys()">Aggiorna →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="avatar" id="topbar-avatar" style="width:34px;height:34px;font-size:14px;flex-shrink:0"></div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:6px">
+        <div id="topbar-name"></div>
+        <span class="tag" id="tb-tag-web" style="display:none;color:var(--daisy);border-color:color-mix(in srgb,var(--daisy) 30%,transparent);background:color-mix(in srgb,var(--daisy) 8%,transparent)">🌐</span>
+        <span class="tag" style="color:var(--victor);border-color:color-mix(in srgb,var(--victor) 30%,transparent);background:color-mix(in srgb,var(--victor) 8%,transparent)">CU</span>
+        <div id="typing-wrap" style="display:none;gap:2px;align-items:center;margin-left:4px">
+          <span class="dot" id="d1"></span><span class="dot" id="d2" style="animation-delay:.15s"></span><span class="dot" id="d3" style="animation-delay:.3s"></span>
+        </div>
+      </div>
+      <div id="topbar-desc"></div>
+    </div>
+    <button id="btn-bus-top" onclick="openDrawer()">
+      ⇄
+      <span id="bus-badge">0</span>
+    </button>
+    <button id="btn-menu" onclick="openDrawer()">☰</button>
+  </div>
+
+  <!-- AGENT TABS -->
+  <div id="agent-tabs"></div>
+
+  <!-- MESSAGES -->
+  <div id="messages"></div>
+
+  <!-- INPUT -->
+  <div id="input-area">
+    <div id="input-wrap">
+      <textarea id="input" rows="1" placeholder="Scrivi a Jenny…"></textarea>
+      <button id="btn-send" onclick="send()">▲</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── AGENTS ──────────────────────────────────────────────────────────────────
+const AGENTS = {
+  memo:{id:"memo",name:"Jenny",role:"Segreteria & Note",icon:"◇",glyph:"J",accent:"#fb923c",hasWeb:true,hasClickup:true,
+    description:"Appunti, smistamento, task rapidi",
+    systemPrompt:`Sei Jenny, agente segretario e orchestratore del sistema multi-agente di Fabio Zorat (R&D Technician, Maddalena S.p.A., Cervignano del Friuli). Hai accesso completo a ClickUp e a Internet.
+
+RUOLO: Punto d'ingresso principale. Ricevi note, appunti, istruzioni e le elabori o smistate agli agenti.
+
+CAPACITÀ:
+- Registrare note come task ClickUp (lista "Inbox" o "Note Varie")
+- Creare task rapidi fuori progetto con priorità
+- Impostare promemoria e scadenze rapide
+- Cercare informazioni online se necessario
+
+SMISTAMENTO (formato esatto):
+- "progetto","wizard","milestone","scadenza" → [AGENT_MSG:aria|istruzione]
+- "report","KPI","andamento","settimana" → [AGENT_MSG:nexus|richiesta]
+- "normativa","mercato","ricerca","MID","OIML","trend" → [AGENT_MSG:scout|richiesta]
+
+FORMATO RISPOSTA:
+📝 NOTA REGISTRATA
+├── Contenuto: [testo]
+├── Priorità: [🔴Alta/🟡Media/🟢Bassa]
+├── Azione: [cosa hai fatto]
+└── ClickUp: [esito]
+
+COMUNICAZIONE INTER-AGENTE:
+[AGENT_MSG:aria|testo per Victor]
+[AGENT_MSG:nexus|testo per Tony]
+[AGENT_MSG:scout|testo per Daisy]
+
+Rispondi SEMPRE in italiano.`},
+  aria:{id:"aria",name:"Victor",role:"Project Manager",icon:"⬡",glyph:"V",accent:"#22d3ee",hasWeb:false,hasClickup:true,
+    description:"Wizard progetti, task, scadenze ClickUp",
+    systemPrompt:`Sei Victor, agente Project Manager ClickUp di Fabio Zorat (R&D, Maddalena S.p.A.). Hai accesso completo ClickUp.
+
+CAPACITÀ: wizard progetti, task/subtask, scadenze, priorità, assegnatari, gerarchie Space>Folder>List>Task>Subtask.
+
+WIZARD:
+1️⃣ Nome e obiettivo
+2️⃣ Tipo (R&D/Testing/SW Dev/Documentazione/Certificazione)
+3️⃣ Scadenza e milestone
+4️⃣ Priorità (🔴Urgente/🟠Alta/🟡Normale/🟢Bassa)
+5️⃣ Conferma → crea in ClickUp
+
+[AGENT_MSG:nexus|richiesta dati]
+[AGENT_MSG:scout|richiesta ricerca]
+[AGENT_MSG:memo|promemoria]
+
+Rispondi in italiano. Conferma ogni azione con ID ClickUp.`},
+  nexus:{id:"nexus",name:"Tony",role:"Analytics & KPI",icon:"◈",glyph:"T",accent:"#a78bfa",hasWeb:false,hasClickup:true,
+    description:"KPI, report settimanali, rischi progetto",
+    systemPrompt:`Sei Tony, agente Analytics & KPI ClickUp di Fabio Zorat (Maddalena S.p.A.). Hai accesso completo ClickUp.
+
+CAPACITÀ: estrai dati, calcola KPI (completamento%, ritardi, burndown), identifica rischi, report settimanali.
+
+REPORT SETTIMANALE:
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 REPORT SETTIMANALE — [Data]
+🟢 In linea: X  🟡 A rischio: X  🔴 In ritardo: X
+✅ Completati: X  ⚡ Velocità: X task/gg
+CRITICI: [nome]→[%] scadenza [data] ⚠️[motivo]
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[AGENT_MSG:aria|aggiornamento task]
+[AGENT_MSG:memo|alert urgente]
+
+Rispondi in italiano. Usa dati reali da ClickUp.`},
+  scout:{id:"scout",name:"Daisy",role:"Market Research",icon:"◎",glyph:"D",accent:"#34d399",hasWeb:true,hasClickup:true,
+    description:"Normative IoT, trend mercato, R&D",
+    systemPrompt:`Sei Daisy, agente Market Research per Fabio Zorat (Maddalena S.p.A. — contatori acqua, smart metering). Hai accesso completo a Internet e ClickUp.
+
+EXPERTISE: MID 2014/32/EU, OIML R49, EN 13757 wM-Bus, NB-IoT, LoRaWAN, mercato IoT EU, AMR/AMI.
+
+BRIEFING:
+🔍 BRIEFING DAISY — [Data]
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 TEMA: [argomento]
+🌐 Fonte: [URL]
+⚡ Rilevanza: Alta/Media/Bassa
+🏭 Impatto Maddalena: [concreto]
+💡 Raccomandazione: [azione]
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[AGENT_MSG:aria|nuovo progetto/modifica]
+[AGENT_MSG:nexus|benchmark]
+[AGENT_MSG:memo|nota urgente]
+
+Rispondi in italiano. Cita sempre le fonti.`}
+};
+
+const ORDER=["memo","aria","nexus","scout"];
+const WEB_TOOL={type:"web_search_20250305",name:"web_search"};
+const WEB_AGENTS=new Set(["memo","scout"]);
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+const getAntKey  = ()=>localStorage.getItem("sa_ant_key")||"";
+const getCuToken = ()=>localStorage.getItem("sa_cu_token")||"";
+
+function saveKeys(){
+  const ant=document.getElementById("inp-anthropic").value.trim();
+  const cu =document.getElementById("inp-clickup").value.trim();
+  if(!ant||!cu){alert("Inserisci entrambe le chiavi.");return;}
+  localStorage.setItem("sa_ant_key",ant);
+  localStorage.setItem("sa_cu_token",cu);
+  document.getElementById("modal-overlay").classList.add("hidden");
+  render();
+}
+function updateKeys(){
+  const ant=document.getElementById("edit-ant").value.trim();
+  const cu =document.getElementById("edit-cu").value.trim();
+  if(ant) localStorage.setItem("sa_ant_key",ant);
+  if(cu)  localStorage.setItem("sa_cu_token",cu);
+  closeDrawer();
+}
+
+function openDrawer(){
+  document.getElementById("edit-ant").value=getAntKey();
+  document.getElementById("edit-cu").value=getCuToken();
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("drawer-overlay").classList.add("open");
+}
+function closeDrawer(){
+  document.getElementById("drawer").classList.remove("open");
+  document.getElementById("drawer-overlay").classList.remove("open");
+}
+
+// ─── API HELPERS ─────────────────────────────────────────────────────────────
+function baseHeaders(){
+  return{"Content-Type":"application/json","x-api-key":getAntKey(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+}
+function mcpHeaders(){
+  return{...baseHeaders(),"anthropic-beta":"mcp-client-2025-04-04"};
+}
+function getClickupMCP(){
+  return{type:"url",url:"https://mcp.clickup.com/mcp",name:"clickup",authorization_token:getCuToken()};
+}
+
+async function apiPost(headers, body){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,body:JSON.stringify(body)});
+  if(!res.ok){
+    let msg=`HTTP ${res.status}`;
+    try{const e=await res.json();msg=`${res.status}: ${e?.error?.message||e?.error?.type||res.statusText}`;}catch{}
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
+async function callAgent(agent, messages){
+  if(!getAntKey()||!getCuToken()){
+    document.getElementById("modal-overlay").classList.remove("hidden");
+    throw new Error("Chiavi API mancanti");
+  }
+  const useWeb=WEB_AGENTS.has(agent.id);
+  const body={model:"claude-sonnet-4-6",max_tokens:1500,system:agent.systemPrompt,messages,mcp_servers:[getClickupMCP()]};
+  if(useWeb) body.tools=[WEB_TOOL];
+  const data=await apiPost(mcpHeaders(),body);
+  const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const agentMsgs=[];
+  const rx=/\[AGENT_MSG:(\w+)\|([^\]]+)\]/g;let m;
+  while((m=rx.exec(text))!==null) agentMsgs.push({to:m[1],content:m[2]});
+  return{text:text.replace(/\[AGENT_MSG:\w+\|[^\]]+\]/g,"").trim(),agentMsgs};
+}
+
+// ─── CONNECTION CHECK ─────────────────────────────────────────────────────────
+async function checkClaude(){
+  if(!getAntKey()) return{ok:false,msg:"chiave mancante"};
+  try{
+    const d=await apiPost(baseHeaders(),{model:"claude-sonnet-4-6",max_tokens:20,messages:[{role:"user",content:"Rispondi solo OK"}]});
+    const ok=(d.content||[]).some(b=>b.type==="text");
+    return{ok,msg:ok?"":"vuoto"};
+  }catch(e){return{ok:false,msg:e.message};}
+}
+async function checkClickUp(){
+  if(!getAntKey()||!getCuToken()) return{ok:false,msg:"token mancante"};
+  try{
+    const d=await apiPost(mcpHeaders(),{model:"claude-sonnet-4-6",max_tokens:100,messages:[{role:"user",content:"Chiama clickup_get_workspace_hierarchy e rispondimi solo con OK: e il nome workspace."}],mcp_servers:[getClickupMCP()]});
+    const ok=(d.content||[]).some(b=>b.type==="mcp_tool_use"||b.type==="tool_use"||(b.type==="text"&&b.text.length>2));
+    return{ok,msg:ok?"":"nessuna risposta MCP"};
+  }catch(e){return{ok:false,msg:e.message};}
+}
+
+function setLed(id,ok,msg){
+  document.getElementById("led-"+id).className="led "+(ok?"ok":"err");
+  const tx=document.getElementById("led-"+id+"-txt");
+  tx.className="led-status "+(ok?"ok":"err");
+  tx.textContent=ok?"OK":(msg||"ERR");
+  tx.title=msg||"";
+}
+function setLedChecking(id){
+  document.getElementById("led-"+id).className="led checking";
+  const tx=document.getElementById("led-"+id+"-txt");
+  tx.className="led-status checking";tx.textContent="…";
+}
+async function runCheck(){
+  if(!getAntKey()||!getCuToken()){document.getElementById("modal-overlay").classList.remove("hidden");return;}
+  const btn=document.getElementById("btn-check");
+  btn.disabled=true;btn.textContent="● IN CORSO…";
+  setLedChecking("web");setLedChecking("cu");
+  const[cl,cu]=await Promise.all([checkClaude(),checkClickUp()]);
+  setLed("web",cl.ok,cl.msg);setLed("cu",cu.ok,cu.msg);
+  btn.disabled=false;btn.textContent="⟳  VERIFICA CONNESSIONE";
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let selected="memo";
+let histories={memo:[],aria:[],nexus:[],scout:[]};
+let displays ={memo:[],aria:[],nexus:[],scout:[]};
+let loading  ={memo:false,aria:false,nexus:false,scout:false};
+let busLog=[];
+
+function ts(){return new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});}
+function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderTabs(){
+  const tabs=document.getElementById("agent-tabs");
+  tabs.innerHTML="";
+  ORDER.forEach(id=>{
+    const ag=AGENTS[id];const active=id===selected;const busy=loading[id];
+    const div=document.createElement("div");
+    div.className="tab"+(active?" active":"");
+    div.style.setProperty("--tab-accent",ag.accent);
+    div.onclick=()=>selectAgent(id);
+    div.innerHTML=`
+      <div class="tab-av" style="background:${ag.accent}18;border:1.5px solid ${ag.accent}${active?"99":"33"};color:${ag.accent}">${ag.glyph}</div>
+      <div class="tab-name" style="color:${active?ag.accent:"var(--muted)"}">${ag.name}</div>
+      <div class="tab-busy ${busy?"on":""}" style="gap:2px">
+        ${[0,1,2].map(i=>`<span class="dot" style="width:3px;height:3px;background:${ag.accent};animation-delay:${i*.15}s"></span>`).join("")}
+      </div>`;
+    tabs.appendChild(div);
+  });
+}
+
+function renderTopbar(){
+  const ag=AGENTS[selected];
+  const av=document.getElementById("topbar-avatar");
+  av.style.cssText=`width:34px;height:34px;font-size:14px;flex-shrink:0;background:${ag.accent}18;border:1.5px solid ${ag.accent}55;color:${ag.accent};border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:600`;
+  av.textContent=ag.glyph;
+  document.getElementById("topbar-name").textContent=ag.name;
+  document.getElementById("topbar-name").style.color=ag.accent;
+  document.getElementById("topbar-name").style.fontFamily="'Syne',sans-serif";
+  document.getElementById("topbar-name").style.fontWeight="700";
+  document.getElementById("topbar-desc").textContent=ag.description;
+  document.getElementById("topbar-desc").style.cssText="font-size:10px;color:var(--muted);margin-top:1px";
+  document.getElementById("tb-tag-web").style.display=ag.hasWeb?"":"none";
+  document.getElementById("input").placeholder=`Scrivi a ${ag.name}…`;
+  document.getElementById("btn-send").style.background=ag.accent;
+  document.getElementById("app").style.setProperty("--active-accent",ag.accent);
+  ["d1","d2","d3"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.background=ag.accent;});
+  document.getElementById("typing-wrap").style.display=loading[selected]?"flex":"none";
+  // bus badge
+  const bb=document.getElementById("bus-badge");
+  bb.style.display=busLog.length>0?"":"none";
+  bb.textContent=busLog.length;
+}
+
+function renderMessages(){
+  const box=document.getElementById("messages");
+  const msgs=displays[selected];
+  if(msgs.length===0){
+    const ag=AGENTS[selected];
+    box.innerHTML=`<div class="empty-state"><div class="empty-icon">${ag.icon}</div><div class="empty-name" style="color:${ag.accent}">${ag.name}</div><div class="empty-desc">${ag.description}</div></div>`;
+    return;
+  }
+  box.innerHTML="";
+  msgs.forEach(msg=>box.appendChild(buildMsgEl(msg)));
+  if(loading[selected]){
+    const ag=AGENTS[selected];
+    const w=document.createElement("div");w.className="typing-bubble";
+    w.innerHTML=`<div style="width:26px;height:26px;border-radius:5px;font-size:11px;flex-shrink:0;background:${ag.accent}18;border:1.5px solid ${ag.accent}55;color:${ag.accent};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:600">${ag.glyph}</div>
+    <div class="msg-bubble" style="padding:11px 13px"><span style="display:inline-flex;gap:3px">${[0,1,2].map(i=>`<span class="dot" style="background:${ag.accent};animation-delay:${i*.2}s"></span>`).join("")}</span></div>`;
+    box.appendChild(w);
+  }
+  box.scrollTop=box.scrollHeight;
+}
+
+function buildMsgEl(msg){
+  const ag=AGENTS[selected];
+  const fromAg=msg.fromAgent?AGENTS[msg.fromAgent]:ag;
+  const isUser=msg.role==="user";const isSys=msg.role==="system";const isErr=msg.role==="error";
+  const wrap=document.createElement("div");wrap.className="msg-wrap"+(isUser?" user":"");
+  const ava=isSys?fromAg:ag;
+  if(!isUser) wrap.innerHTML+=`<div style="width:26px;height:26px;border-radius:5px;font-size:11px;flex-shrink:0;background:${ava.accent}18;border:1.5px solid ${ava.accent}55;color:${ava.accent};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:600">${ava.glyph}</div>`;
+  const bc="msg-bubble"+(isSys?" sys":"")+(isErr?" err":"");
+  const us=isUser?`background:color-mix(in srgb,${ag.accent} 10%,transparent);border-color:color-mix(in srgb,${ag.accent} 25%,transparent)`:"";
+  let inner="";
+  if(isSys) inner+=`<div class="msg-sys-label">${escHtml(msg.content)}</div>`;
+  if(msg.role!=="system") inner+=`<div class="msg-text">${escHtml(msg.content)}</div>`;
+  inner+=`<div class="msg-time">${msg.time}</div>`;
+  wrap.innerHTML+=`<div class="${bc}" style="${us}">${inner}</div>`;
+  return wrap;
+}
+
+function renderBus(){
+  const box=document.getElementById("bus-section");
+  const empty=document.getElementById("bus-empty-msg");
+  // remove old bus messages
+  Array.from(box.querySelectorAll(".bus-msg")).forEach(el=>el.remove());
+  if(busLog.length===0){empty.style.display="";return;}
+  empty.style.display="none";
+  busLog.forEach(entry=>{
+    const fA=AGENTS[entry.from];const tA=AGENTS[entry.to];
+    const el=document.createElement("div");el.className="bus-msg";
+    el.innerHTML=`<div class="bus-msg-header"><span class="bus-from" style="color:${fA?.accent}">${fA?.name}</span><span class="bus-arrow">→</span><span class="bus-to" style="color:${tA?.accent}">${tA?.name}</span><span class="bus-time">${entry.time}</span></div><div class="bus-content">${escHtml(entry.content)}</div>`;
+    box.appendChild(el);
+  });
+}
+
+function render(){renderTabs();renderTopbar();renderMessages();renderBus();}
+
+// ─── ACTIONS ──────────────────────────────────────────────────────────────────
+function selectAgent(id){selected=id;render();}
+
+async function processAgent(agentId,userMsg,fromAgent=null,hop=0){
+  const ag=AGENTS[agentId];if(!ag||hop>2) return;
+  loading[agentId]=true;render();
+  const msgs=[...histories[agentId],{role:"user",content:userMsg}];
+  try{
+    const{text,agentMsgs}=await callAgent(ag,msgs);
+    histories[agentId].push({role:"user",content:userMsg});
+    histories[agentId].push({role:"assistant",content:text});
+    if(fromAgent) displays[agentId].push({role:"system",content:`📨 Messaggio da ${AGENTS[fromAgent]?.name||fromAgent}:`,time:ts(),fromAgent});
+    displays[agentId].push({role:"assistant",content:text,time:ts()});
+    for(const m of agentMsgs){
+      const tId=Object.keys(AGENTS).find(k=>k===m.to||AGENTS[k].name.toLowerCase()===m.to.toLowerCase());
+      if(!tId) continue;
+      busLog.push({from:agentId,to:tId,content:m.content,time:ts()});
+      setTimeout(()=>processAgent(tId,m.content,agentId,hop+1),600);
+    }
+  }catch(e){
+    displays[agentId].push({role:"error",content:`⚠️ ${e.message}`,time:ts()});
+  }finally{loading[agentId]=false;render();}
+}
+
+async function send(){
+  const inp=document.getElementById("input");const msg=inp.value.trim();
+  if(!msg||loading[selected]) return;
+  inp.value="";inp.style.height="";
+  displays[selected].push({role:"user",content:msg,time:ts()});render();
+  await processAgent(selected,msg);
+}
+
+document.getElementById("input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
+document.getElementById("input").addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,100)+"px";});
+
+// ─── SERVICE WORKER ───────────────────────────────────────────────────────────
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+if(getAntKey()&&getCuToken()){
+  document.getElementById("modal-overlay").classList.add("hidden");
+}
+render();
+</script>
+</body>
+</html>
